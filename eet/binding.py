@@ -65,8 +65,16 @@ def buildDataXml(sale: Trzba):
 def signEnvelope():
     pass
 
-def buildEnvelope():
-    pass
+def buildEnvelope(data: ET.Element):
+    root = ET.Element("soap:Envelope", {
+        "xmlns:soap": "http://www.w3.org/2003/05/soap-envelope/",
+        "soap:encodingStyle": "http://www.w3.org/2003/05/soap-encoding"
+    })
+    header = ET.SubElement(root, "soap:Header")
+    body = ET.SubElement(root, "soap:Body")
+    body.append(data)
+    
+    return root
 
 def demo():
     trzba = Trzba()
@@ -77,4 +85,6 @@ def demo():
 
     trzba.Pkp = "asdf"
 
-    print(ET.tostring(buildXml(trzba)))
+    print(ET.tostring(buildEnvelope(buildDataXml(trzba))))
+
+demo()
