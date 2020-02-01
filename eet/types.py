@@ -10,7 +10,7 @@ def _pattern(string: str, regex: str):
     return pattern.match(string)
 
 class UUIDType(str):
-    PATTERN = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"
+    PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
 
     def __new__(cls, val):
         if not _pattern(val, cls.PATTERN):
@@ -19,12 +19,21 @@ class UUIDType(str):
             raise ValueError(str(val) + " is not 36 chars long")
         return str.__new__(cls, val)
 
+class boolean:
+    def __init__(self, val):
+        if not isinstance(val, bool):
+            raise ValueError(str(val) + " is not bool")
+        self._val = val
+    
+    def __str__(self):
+        return "true" if self._val else "false"
+
 class dateTime(datetime):
     def __str__(self):
         return self.replace(tzinfo=timezone.utc).astimezone().replace(microsecond=0).isoformat()
 
 class CZDICType(str):
-    PATTERN = "CZ[0-9]{8,10}"
+    PATTERN = r"^CZ[0-9]{8,10}$"
 
     def __new__(cls, val):
         if not _pattern(val, cls.PATTERN):
@@ -38,7 +47,7 @@ class IdProvozType(int):
         return int.__new__(cls, val)
 
 class string20(str):
-    PATTERN = "[0-9a-zA-Z\.,:;/#\-_ ]{1,20}"
+    PATTERN = r"^[0-9a-zA-Z\.,:;/#\-_ ]{1,20}$"
 
     def __new__(cls, val):
         if not _pattern(val, cls.PATTERN):
@@ -46,7 +55,7 @@ class string20(str):
         return str.__new__(cls, val)
 
 class string25(str):
-    PATTERN = "[0-9a-zA-Z\.,:;/#\-_ ]{1,25}"
+    PATTERN = r"^[0-9a-zA-Z\.,:;/#\-_ ]{1,25}$"
 
     def __new__(cls, val):
         if not _pattern(val, cls.PATTERN):
@@ -71,7 +80,7 @@ class RezimType(int):
         return float.__new__(cls, val)
 
 class BkpType(str):
-    PATTERN = "[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}"
+    PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}$"
 
     def __new__(cls, val):
         if not _pattern(val, cls.PATTERN):
@@ -81,7 +90,7 @@ class BkpType(str):
         return str.__new__(cls, re.sub(r"\s+", "", val))
 
 class FikType(str):
-    PATTERN = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}-[0-9a-fA-F]{2}"
+    PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}-[0-9a-fA-F]{2}$"
 
     def __new__(cls, val):
         if not _pattern(val, cls.PATTERN):
@@ -89,3 +98,11 @@ class FikType(str):
         if len(val) != 39:
             raise ValueError(str(val) + " is not 39 chars long")
         return str.__new__(cls, val)
+
+class PkpType(str):
+    PATTERN = r"^[a-zA-Z0-9+\/]{344}$"
+
+    def __new__(cls, val):
+        if not _pattern(val, cls.PATTERN):
+            raise ValueError(str(val) + " does not match pattern")
+        return str.__new__(cls, re.sub(r"\s+", "", val))
