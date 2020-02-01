@@ -14,7 +14,7 @@ class Trzba:
     }
     Data = {
         "dic_popl": None, # types.CZDICType,
-        "dic_poverujiciho": None, # types.CZDICType,
+        "dic_poverujiciho": None, # Optional[types.CZDICType],
         "id_provoz": None, # types.IdProvozType,
         "id_pokl": None, # types.string20,
         "porad_cis": None, # types.string25,
@@ -39,29 +39,34 @@ class Trzba:
         "pkp": {
             "digest": "SHA256",
             "cipher": "RSA2048",
-            "encoding": "base64",
-            "data": None # types.PkpType
+            "encoding": "base64"
         },
         "bkp": {
             "digest": "SHA1",
-            "encoding": "base16",
-            "data": None # types.BkpType
+            "encoding": "base16"
         }
     }
+    Bkp: types.BkpType = None
+    Pkp: types.PkpType = None
 
-def buildXml(sale: Trzba):
+def buildDataXml(sale: Trzba):
 
     root = ET.Element("eet:Trzba")
-    header = ET.SubElement(root, "eet:Hlavicka", {
-        "uuid_zpravy": str(sale.Hlavicka["uuid_zpravy"]),
-        "dat_odesl": str(sale.Hlavicka["dat_odesl"]),
-        "prvni_zaslani": str(sale.Hlavicka["prvni_zaslani"])
-    })
 
-    if sale.Hlavicka["overeni"]:
-        header.set("overeni", str(sale.Hlavicka["overeni"]))
+    ET.SubElement(root, "eet:Hlavicka", {k: str(v) for k, v in Trzba.Hlavicka.items() if v is not None})
+    ET.SubElement(root, "eet:Data", {k: str(v) for k, v in Trzba.Data.items() if v is not None})
+
+    codes = ET.SubElement(root, "eet:KontrolniKody")
+    ET.SubElement(codes, "eet:pkp", sale.KontrolniKody["pkp"]).text = sale.Pkp
+    ET.SubElement(codes, "eet:bkp", sale.KontrolniKody["bkp"]).text = sale.Bkp
 
     return root
+
+def signEnvelope():
+    pass
+
+def buildEnvelope():
+    pass
 
 def demo():
     trzba = Trzba()
@@ -69,5 +74,7 @@ def demo():
     trzba.Hlavicka["dat_odesl"] = types.dateTime.utcnow()
     trzba.Hlavicka["prvni_zaslani"] = types.boolean(True)
     trzba.Hlavicka["overeni"] = types.boolean(False)
+
+    trzba.Pkp = "asdf"
 
     print(ET.tostring(buildXml(trzba)))
