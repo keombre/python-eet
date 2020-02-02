@@ -7,6 +7,7 @@ from lxml import etree
 import re
 import base64
 import hashlib
+import uuid
 
 # Let's stay cryptic
 from cryptography import x509
@@ -60,24 +61,24 @@ class Trzba:
 
 class Soap:
 
-    def __init__(self, root_ca: Certificate, private_key: RSAPrivateKey):
-        if not isinstance(root_ca, Certificate):
-            raise ValueError("root_ca is not instance of Certificate")
-        self.root_ca = root_ca
+    def __init__(self, cert: Certificate, private_key: RSAPrivateKey):
+        if not isinstance(cert, Certificate):
+            raise ValueError("cert is not instance of Certificate")
+        self.cert = cert
 
         if not isinstance(private_key, RSAPrivateKey):
             raise ValueError("private_key is not instance of RSAPrivateKey")
         self.private_key = private_key
     
-    def __get_ca_cert(self):
-        return self.root_ca.public_bytes(serialization.Encoding.PEM).replace(b"-----BEGIN CERTIFICATE-----", b"").replace(b"-----END CERTIFICATE-----", b"").replace(b"\n", b"")
+    def __get_cert(self):
+        return self.cert.public_bytes(serialization.Encoding.PEM).replace(b"-----BEGIN CERTIFICATE-----", b"").replace(b"-----END CERTIFICATE-----", b"").replace(b"\n", b"")
 
     def build(self, sale: Trzba):
         return etree.tostring(self._build_envelope(self._build_data_element(sale)))
 
     def _build_data_element(self, sale: Trzba):
         root = etree.Element("{http://fs.mfcr.cz/eet/schema/v3}Trzba", nsmap={
-            "eet": "http://fs.mfcr.cz/eet/schema/v3",
+            None: "http://fs.mfcr.cz/eet/schema/v3",
             "xsi": "http://www.w3.org/2001/XMLSchema-instance",
             "xsd": "http://www.w3.org/2001/XMLSchema"
         })
@@ -94,24 +95,25 @@ class Soap:
 
     def _build_envelope(self, data: etree.Element):
 
-        binary_token = "X509-asdf"
-        cert_token = "id-asdf"
+        binary_token = "X509-" + str(uuid.uuid4())
+        uuid_token = "id-" + str(uuid.uuid4())
 
-        tree = etree.parse(str(Path(__file__).parent.absolute().joinpath('soap_template.xml')))
+        parser = etree.XMLParser(remove_blank_text=True)
+        tree = etree.parse(str(Path(__file__).parent.absolute().joinpath('soap_template.xml')), parser)
         root = tree.getroot()
         
         # add body
         body = root.find(".//{http://schemas.xmlsoap.org/soap/envelope/}Body")
-        body.set("{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd}Id", cert_token)
+        body.set("{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd}Id", uuid_token)
         body.append(data)
 
         # add cert
         BinarySecurityToken = root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}BinarySecurityToken")
         BinarySecurityToken.set("{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd}Id", binary_token)
-        BinarySecurityToken.text = self.__get_ca_cert()
+        BinarySecurityToken.text = self.__get_cert()
 
         # cert ref
-        root.find(".//{http://www.w3.org/2000/09/xmldsig#}Reference").set("URI", cert_token)
+        root.find(".//{http://www.w3.org/2000/09/xmldsig#}Reference").set("URI", "#" + uuid_token)
 
         # digest
         body_text = etree.tostring(body, method='c14n', exclusive=True, with_comments=False)

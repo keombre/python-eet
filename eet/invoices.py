@@ -1,5 +1,6 @@
 from . import binding, types
 from datetime import datetime
+import uuid
 
 from pathlib import Path
 import urllib.request
@@ -25,6 +26,7 @@ class Config:
         dic_popl: types.CZDICType,
         id_provoz: types.IdProvozType,
         id_pokl: types.string20,
+        cert: Certificate,
         private_key: RSAPrivateKey,
         mode: str = "play",
         dic_poverujiciho: types.CZDICType = None
@@ -42,13 +44,39 @@ class Config:
         if dic_poverujiciho:
             self._val["dic_poverujiciho"] = types.CZDICType(dic_poverujiciho)
         
+        if not isinstance(cert, Certificate):
+            raise ValueError("invalid certificate")
+        self._cert = cert
+
         if not isinstance(private_key, RSAPrivateKey):
             raise ValueError("invalid private key")
+        self._private_key = private_key
 
         if self._mode == "play":
-            self._cert = self.__load_or_download(self.PLAYGROUND_FILE, self.PLAYGROUND_URL)
+            self._root_cert = self.__load_or_download(self.PLAYGROUND_FILE, self.PLAYGROUND_URL)
         else:
-            self._cert = self.__load_or_download(self.PRODUCTION_FILE, self.PRODUCTION_URL)
+            self._root_cert = self.__load_or_download(self.PRODUCTION_FILE, self.PRODUCTION_URL)
+    
+    def get(self, val):
+        if val in self._val:
+            return self._val[val]
+        else:
+            return None
+    
+    def play(self):
+        return self._mode == "play"
+    
+    def prod(self):
+        return self._mode == "prod"
+    
+    def cert(self):
+        return self._cert
+    
+    def root_cert(self):
+        return self._root_cert
+    
+    def private_key(self):
+        return self._private_key
     
     @staticmethod
     def __load_or_download(filename: str, url: str):
@@ -94,8 +122,75 @@ class Config:
         with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
 
+class Invoice(binding.Trzba):
+    
+    def __init__(self, cert: Certificate, private_key: RSAPrivateKey):
+        super()
+        self._cert = cert
+        self._private_key = private_key
+
+    def _buildXml(self):
+        return binding.Soap(self._cert, self._private_key).build(self)
+    
+    def send(self):
+        if self.Hlavicka["prvni_zaslani"] or not "dat_odesl" in self.Hlavicka:
+            self.Hlavicka["dat_odesl"] = types.dateTime.utcnow()
+        self.Hlavicka["uuid_zpravy"] = types.UUIDType(str(uuid.uuid4()))
+
+        print(self._buildXml())
+        
+
 class Factory:
     def __init__(self, config: Config, ):
         if not isinstance(config, Config):
             raise ValueError("invalid config")
+        self._config = config
     
+    def new(
+        self,
+        porad_cis: types.string25,
+        celk_trzba: types.CastkaType,
+        dat_trzby: types.dateTime = types.dateTime.utcnow(),
+        **kwargs: types.CastkaType
+    ):
+        sale = Invoice(self._config.cert(), self._config.private_key())
+        
+        # set to True for debugging
+        sale.Hlavicka["overeni"] = types.boolean(False)
+
+        sale.Hlavicka["prvni_zaslani"] = types.boolean(True)
+        sale.Data["dic_popl"] = self._config.get("dic_popl")
+        sale.Data["id_provoz"] = self._config.get("id_provoz")
+        sale.Data["id_pokl"] = self._config.get("id_pokl")
+
+        if self._config.get("dic_poverujiciho"):
+            sale.Data["dic_poverujiciho"] = self._config.get("dic_poverujiciho")
+
+        sale.Data["porad_cis"] = types.string25(porad_cis)
+        sale.Data["celk_trzba"] = types.CastkaType(celk_trzba)
+
+        if not isinstance(dat_trzby, types.dateTime):
+            raise ValueError("invalid date")
+        sale.Data["dat_trzby"] = dat_trzby
+        
+        sale.Data["rezim"] = types.RezimType(1 if self._config.play() else 0)
+
+        for price in [
+            "zakl_nepodl_dph",
+            "zakl_dan1",
+            "dan1",
+            "zakl_dan2",
+            "dan2",
+            "zakl_dan3",
+            "dan3",
+            "cest_sluz",
+            "pouzit_zboz1",
+            "pouzit_zboz2",
+            "pouzit_zboz3",
+            "urceno_cerp_zuct",
+            "cerp_zuct"
+        ]:
+            if price in kwargs:
+                sale.Data[price] = types.CastkaType(kwargs[price])
+
+        return sale

@@ -25,6 +25,9 @@ class boolean:
             raise ValueError(str(val) + " is not bool")
         self._val = val
     
+    def __bool__(self):
+        return self._val
+    
     def __str__(self):
         return "true" if self._val else "false"
 
@@ -77,7 +80,7 @@ class RezimType(int):
     def __new__(cls, val):
         if val != 0 and val != 1:
             raise ValueError(str(val) + " is not valid")
-        return float.__new__(cls, val)
+        return int.__new__(cls, val)
 
 class BkpType(str):
     PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}$"
