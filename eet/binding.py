@@ -1,4 +1,4 @@
-from . import types
+from . import types, helpers
 
 from pathlib import Path
 from lxml import etree
@@ -7,9 +7,10 @@ import re
 import base64
 import hashlib
 import uuid
+import textwrap
 
 # Let's stay cryptic
-from cryptography.x509 import Certificate
+from cryptography.x509 import Certificate, oid
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -54,6 +55,25 @@ class Trzba:
             "digest": "SHA1", # str
             "encoding": "base16" # str
         }
+    }
+
+class Odpoved:
+    Hlavicka = {
+        "uuid_zpravy": None, # Optional[types.UUIDType]
+        "bkp": None, # Optional[types.BkpType]
+        "dat_prij": None, # Optional[types.dateTime]
+        "dat_odmit": None, # Optional[types.dateTime]
+        "Potvrzeni": {
+            "fik": None, # types.FikType
+            "test": None # Optional[types.boolean]
+        },
+        "Chyba": {
+            "kod": None, # types.KodChybaType
+            "test": None # Optional[types.boolean]
+        }
+    }
+    Varovani = {
+        "kod_varov": None # Optional[types.KodVarovType]
     }
 
 class Soap:
@@ -141,3 +161,51 @@ class Soap:
     def _calc_bkp(self, sign):
         digest = hashlib.sha1(sign).hexdigest()
         return ("{0}-{1}-{2}-{3}-{4}".format(digest[0:8], digest[8:16], digest[16:24], digest[24:32], digest[32:])).upper()
+
+    @staticmethod
+    def __validate_message(root: etree, ignore_invalid_cert):
+
+        server_cert_text = root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}BinarySecurityToken").text
+        server_cert = helpers.parse_cert(b"-----BEGIN CERTIFICATE-----\n" + textwrap.fill(server_cert_text, 64).encode() + b"\n-----END CERTIFICATE-----\n")
+
+        if server_cert.subject.get_attributes_for_oid(oid.NameOID.ORGANIZATION_NAME)[0].value != "Česká republika - Generální finanční ředitelství":
+            raise ValueError("Invalid server certificate")
+
+        if not ignore_invalid_cert:
+            # validate signature
+            signature = root.find(".//{http://www.w3.org/2000/09/xmldsig#}SignatureValue").text
+            signed_info = root.find(".//{http://www.w3.org/2000/09/xmldsig#}SignedInfo")
+            signed_text = etree.tostring(signed_info, method='c14n', exclusive=True, with_comments=False)
+            server_cert.public_key().verify(base64.b64decode(signature), signed_text, padding.PKCS1v15(), hashes.SHA256())
+        
+        # validate digest
+        body = root.find(".//{http://schemas.xmlsoap.org/soap/envelope/}Body")
+        body_text = etree.tostring(body, method='c14n', exclusive=True, with_comments=False)
+        digest = base64.b64encode(hashlib.sha256(body_text).digest()).decode()
+        if not root.find(".//{http://www.w3.org/2000/09/xmldsig#}DigestValue").text == digest:
+            raise ValueError("invalid digest")
+
+        # validate ref
+        body_id = body.get("{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd}Id")
+        ref_id = root.find(".//{http://www.w3.org/2000/09/xmldsig#}Reference").get("URI")
+
+        if ref_id != "#" + body_id:
+            raise ValueError("invalid body ref")
+
+        # validate token
+        BinarySecurityToken = root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}BinarySecurityToken")
+        sec_token = BinarySecurityToken.get("{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd}Id")
+        ref_token = root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}Reference").get("URI")
+
+        if ref_token != "#" + sec_token:
+            raise ValueError("invalid security token")
+
+    @staticmethod
+    def parse_response(text: str, ignore_invalid_cert=False):
+        parser = etree.XMLParser(remove_blank_text=True)
+        root = etree.XML(text, parser)
+
+        if root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}Security"):
+            Soap.__validate_message(root, ignore_invalid_cert)
+        
+        

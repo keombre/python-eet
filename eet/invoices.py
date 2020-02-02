@@ -37,9 +37,9 @@ class Config:
 
         cert_type = self._cert.issuer.get_attributes_for_oid(oid.NameOID.COMMON_NAME)[0].value
         if "Playground" in cert_type:
-            mode = "play"
+            self._mode = "play"
         else:
-            mode = "prod"
+            self._mode = "prod"
 
         subject = self._cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)[0].value
         try:
@@ -52,10 +52,6 @@ class Config:
             "id_provoz": types.IdProvozType(id_provoz),
             "id_pokl": types.string20(id_pokl),
         }
-        
-        if mode != "prod" and mode != "play":
-            raise ValueError("invalid mode must be one of {\"prod\", \"play\"}")
-        self._mode = mode
 
         if dic_poverujiciho:
             self._val["dic_poverujiciho"] = types.CZDICType(dic_poverujiciho)
@@ -63,11 +59,6 @@ class Config:
         if not isinstance(private_key, RSAPrivateKey):
             raise ValueError("invalid private key")
         self._private_key = private_key
-
-        if self._mode == "play":
-            self._root_cert = self.__load_or_download(self.PLAYGROUND_FILE, self.PLAYGROUND_URL)
-        else:
-            self._root_cert = self.__load_or_download(self.PRODUCTION_FILE, self.PRODUCTION_URL)
     
     def get(self, val):
         if val in self._val:
@@ -84,36 +75,8 @@ class Config:
     def cert(self):
         return self._cert
     
-    def root_cert(self):
-        return self._root_cert
-    
     def private_key(self):
         return self._private_key
-    
-    @staticmethod
-    def __load_or_download(filename: str, url: str):
-        path = Path(Config.LOCAL_PATH).joinpath(filename)
-
-        try:
-            if path.is_file():
-                try:
-                    cert = helpers.load_cert(str(path))
-                    if not Config.__check_validity(cert):
-                        helpers.download(str(path), url)
-                        cert = helpers.load_cert(str(path))
-                except ValueError:
-                    helpers.download(str(path), url)
-                    cert = helpers.load_cert(str(path))
-            else:
-                helpers.download(str(path), url)
-                cert = helpers.load_cert(str(path))
-        except ValueError:
-            raise ValueError("Failed to load certificate. Check internet connection")
-        
-        if not Config.__check_validity(cert):
-            raise ValueError("Certificate expired. Check system time")
-
-        return cert
     
     @staticmethod
     def __check_validity(cert: Certificate):
@@ -138,6 +101,12 @@ class Factory:
             self.Hlavicka["uuid_zpravy"] = types.UUIDType(str(uuid.uuid4()))
 
             print(self._buildXml())
+    
+    class Response:
+        # status
+        # bkp
+        # fik/pkp
+        pass
             
     def __init__(self, config: Config, ):
         if not isinstance(config, Config):

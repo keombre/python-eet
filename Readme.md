@@ -6,13 +6,13 @@ Example usage
 ```python
 from eet import invoices, helpers
 
-cert_text = '''
+cert_text = b'''
 -----BEGIN CERTIFICATE-----
 ...
 -----END CERTIFICATE-----
 '''
 
-key_text = '''
+key_text = b'''
 -----BEGIN RSA PRIVATE KEY-----
 ...
 -----END RSA PRIVATE KEY-----

@@ -76,6 +76,18 @@ class CastkaType(float):
     def __str__(self):
         return "%.2f" % self
 
+class KodChybaType(int):
+    def __new__(cls, val):
+        if val < -999 or val > 999:
+            raise ValueError(str(val) + " is outside range")
+        return int.__new__(cls, val)
+
+class KodVarovType(int):
+    def __new__(cls, val):
+        if val < 1 or val > 999:
+            raise ValueError(str(val) + " is outside range")
+        return int.__new__(cls, val)
+
 class RezimType(int):
     def __new__(cls, val):
         if val != 0 and val != 1:
