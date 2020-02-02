@@ -27,17 +27,32 @@ class Config:
         private_key: RSAPrivateKey,
         id_provoz: types.IdProvozType,
         id_pokl: types.string20,
-        mode: str = "play",
         dic_poverujiciho: types.CZDICType = None
     ):
         if not isinstance(cert, Certificate):
             raise ValueError("invalid certificate")
+        
+        if cert.issuer.get_attributes_for_oid(oid.NameOID.ORGANIZATION_NAME)[0].value != "Česká Republika – Generální finanční ředitelství":
+            raise ValueError("Certificate was not issued by MFCR")
+
+        if not self.__check_validity(cert):
+            raise ValueError("certificate expired - check system time or update your certificate")
         self._cert = cert
 
+        cert_type = self._cert.issuer.get_attributes_for_oid(oid.NameOID.COMMON_NAME)[0].value
+        if "Playground" in cert_type:
+            mode = "play"
+        else:
+            mode = "prod"
+
         subject = self._cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)[0].value
+        try:
+            dic_popl = types.CZDICType(subject)
+        except ValueError:
+            raise ValueError("certificate is not valid for EET")
 
         self._val = {
-            "dic_popl": types.CZDICType(subject),
+            "dic_popl": dic_popl,
             "id_provoz": types.IdProvozType(id_provoz),
             "id_pokl": types.string20(id_pokl),
         }
@@ -48,7 +63,6 @@ class Config:
 
         if dic_poverujiciho:
             self._val["dic_poverujiciho"] = types.CZDICType(dic_poverujiciho)
-        
 
         if not isinstance(private_key, RSAPrivateKey):
             raise ValueError("invalid private key")
@@ -123,26 +137,26 @@ class Config:
     def __download(filename: str, url: str):
         with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
-
-class Invoice(binding.Trzba):
-    
-    def __init__(self, cert: Certificate, private_key: RSAPrivateKey):
-        super()
-        self._cert = cert
-        self._private_key = private_key
-
-    def _buildXml(self):
-        return binding.Soap(self._cert, self._private_key).build(self)
-    
-    def send(self):
-        if self.Hlavicka["prvni_zaslani"] or not "dat_odesl" in self.Hlavicka:
-            self.Hlavicka["dat_odesl"] = types.dateTime.utcnow()
-        self.Hlavicka["uuid_zpravy"] = types.UUIDType(str(uuid.uuid4()))
-
-        print(self._buildXml())
         
 
 class Factory:
+    class Invoice(binding.Trzba):
+        
+        def __init__(self, cert: Certificate, private_key: RSAPrivateKey):
+            super()
+            self._cert = cert
+            self._private_key = private_key
+
+        def _buildXml(self):
+            return binding.Soap(self._cert, self._private_key).build(self)
+        
+        def send(self):
+            if self.Hlavicka["prvni_zaslani"] or not "dat_odesl" in self.Hlavicka:
+                self.Hlavicka["dat_odesl"] = types.dateTime.utcnow()
+            self.Hlavicka["uuid_zpravy"] = types.UUIDType(str(uuid.uuid4()))
+
+            print(self._buildXml())
+            
     def __init__(self, config: Config, ):
         if not isinstance(config, Config):
             raise ValueError("invalid config")
@@ -155,7 +169,7 @@ class Factory:
         dat_trzby: types.dateTime = types.dateTime.utcnow(),
         **kwargs: types.CastkaType
     ):
-        sale = Invoice(self._config.cert(), self._config.private_key())
+        sale = self.Invoice(self._config.cert(), self._config.private_key())
         
         # set to True for debugging
         sale.Hlavicka["overeni"] = types.boolean(False)
