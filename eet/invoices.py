@@ -7,7 +7,7 @@ import urllib.request
 import shutil
 
 from cryptography import x509
-from cryptography.x509 import Certificate
+from cryptography.x509 import Certificate, oid
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
@@ -23,16 +23,21 @@ class Config:
 
     def __init__(
         self,
-        dic_popl: types.CZDICType,
-        id_provoz: types.IdProvozType,
-        id_pokl: types.string20,
         cert: Certificate,
         private_key: RSAPrivateKey,
+        id_provoz: types.IdProvozType,
+        id_pokl: types.string20,
         mode: str = "play",
         dic_poverujiciho: types.CZDICType = None
     ):
+        if not isinstance(cert, Certificate):
+            raise ValueError("invalid certificate")
+        self._cert = cert
+
+        subject = self._cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)[0].value
+
         self._val = {
-            "dic_popl": types.CZDICType(dic_popl),
+            "dic_popl": types.CZDICType(subject),
             "id_provoz": types.IdProvozType(id_provoz),
             "id_pokl": types.string20(id_pokl),
         }
@@ -44,9 +49,6 @@ class Config:
         if dic_poverujiciho:
             self._val["dic_poverujiciho"] = types.CZDICType(dic_poverujiciho)
         
-        if not isinstance(cert, Certificate):
-            raise ValueError("invalid certificate")
-        self._cert = cert
 
         if not isinstance(private_key, RSAPrivateKey):
             raise ValueError("invalid private key")
