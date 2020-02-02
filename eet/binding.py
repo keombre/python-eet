@@ -1,5 +1,4 @@
 from . import types
-from typing import Optional
 
 from pathlib import Path
 from lxml import etree
@@ -10,12 +9,10 @@ import hashlib
 import uuid
 
 # Let's stay cryptic
-from cryptography import x509
 from cryptography.x509 import Certificate
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.backends import default_backend
 
 class Trzba:
     Hlavicka = {

@@ -1,14 +1,10 @@
-from . import binding, types
+from . import binding, types, helpers
 from datetime import datetime
 import uuid
 
 from pathlib import Path
-import urllib.request
-import shutil
 
-from cryptography import x509
 from cryptography.x509 import Certificate, oid
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
 
@@ -101,16 +97,16 @@ class Config:
         try:
             if path.is_file():
                 try:
-                    cert = Config.__load_cert(str(path))
+                    cert = helpers.load_cert(str(path))
                     if not Config.__check_validity(cert):
-                        Config.__download(str(path), url)
-                        cert = Config.__load_cert(str(path))
+                        helpers.download(str(path), url)
+                        cert = helpers.load_cert(str(path))
                 except ValueError:
-                    Config.__download(str(path), url)
-                    cert = Config.__load_cert(str(path))
+                    helpers.download(str(path), url)
+                    cert = helpers.load_cert(str(path))
             else:
-                Config.__download(str(path), url)
-                cert = Config.__load_cert(str(path))
+                helpers.download(str(path), url)
+                cert = helpers.load_cert(str(path))
         except ValueError:
             raise ValueError("Failed to load certificate. Check internet connection")
         
@@ -125,33 +121,19 @@ class Config:
         if cert.not_valid_before > now or cert.not_valid_after < now:
             return False
         return True
-
-    @staticmethod
-    def __load_cert(filename: str):
-        cert_file = open(filename, 'rb')
-        key = cert_file.read().strip()
-        cert_file.close()
-        return x509.load_pem_x509_certificate(key, default_backend())
     
-    @staticmethod
-    def __download(filename: str, url: str):
-        with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
-            shutil.copyfileobj(response, out_file)
-        
 
 class Factory:
     class Invoice(binding.Trzba):
-        
-        def __init__(self, cert: Certificate, private_key: RSAPrivateKey):
+        def __init__(self, config: Config):
             super()
-            self._cert = cert
-            self._private_key = private_key
+            self._config = config
 
         def _buildXml(self):
-            return binding.Soap(self._cert, self._private_key).build(self)
+            return binding.Soap(self._config.cert(), self._config.private_key()).build(self)
         
         def send(self):
-            if self.Hlavicka["prvni_zaslani"] or not "dat_odesl" in self.Hlavicka:
+            if self.Hlavicka["prvni_zaslani"] or not self.Hlavicka["dat_odesl"]:
                 self.Hlavicka["dat_odesl"] = types.dateTime.utcnow()
             self.Hlavicka["uuid_zpravy"] = types.UUIDType(str(uuid.uuid4()))
 
@@ -169,7 +151,7 @@ class Factory:
         dat_trzby: types.dateTime = types.dateTime.utcnow(),
         **kwargs: types.CastkaType
     ):
-        sale = self.Invoice(self._config.cert(), self._config.private_key())
+        sale = self.Invoice(self._config)
         
         # set to True for debugging
         sale.Hlavicka["overeni"] = types.boolean(False)

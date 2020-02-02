@@ -4,11 +4,7 @@ Simple binding for Czech EET.
 Example usage
 -------------
 ```python
-from eet import invoices
-
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from eet import invoices, helpers
 
 cert_text = '''
 -----BEGIN CERTIFICATE-----
@@ -22,11 +18,9 @@ key_text = '''
 -----END RSA PRIVATE KEY-----
 '''
 
-# load certificate
-cert = x509.load_pem_x509_certificate(cert_text)
-
-# load private key
-pk = serialization.load_pem_private_key(key_text, None, default_backend())
+# prepare certificate and private key
+cert = helpers.parse_cert(cert_text)
+pk   = helpers.parse_key(key_text)
 
 # create config
 config = invoices.Config(cert, pk, 141, "1patro-vpravo")
