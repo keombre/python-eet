@@ -1,7 +1,6 @@
 from . import types
 from typing import Optional
 
-from dataclasses import dataclass
 from pathlib import Path
 from lxml import etree
 
@@ -17,7 +16,6 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 
-@dataclass
 class Trzba:
     Hlavicka = {
         "uuid_zpravy": None, # types.UUIDType,
@@ -50,13 +48,13 @@ class Trzba:
     }
     KontrolniKody = {
         "pkp": {
-            "digest": "SHA256",
-            "cipher": "RSA2048",
-            "encoding": "base64"
+            "digest": "SHA256", # str
+            "cipher": "RSA2048", # str
+            "encoding": "base64" # str
         },
         "bkp": {
-            "digest": "SHA1",
-            "encoding": "base16"
+            "digest": "SHA1", # str
+            "encoding": "base16" # str
         }
     }
 
@@ -144,4 +142,3 @@ class Soap:
     def _calc_bkp(self, sign):
         digest = hashlib.sha1(sign).hexdigest()
         return ("{0}-{1}-{2}-{3}-{4}".format(digest[0:8], digest[8:16], digest[16:24], digest[24:32], digest[32:])).upper()
-

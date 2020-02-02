@@ -130,3 +130,6 @@ dmypy.json
 
 *.pem
 *.key
+eet/certs/*
+!eet/certs/.gitkeep
+demo.py
