@@ -1,7 +1,9 @@
 import urllib.request
 import shutil
+from datetime import datetime
 
 from cryptography import x509
+from cryptography.x509 import Certificate
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
@@ -29,3 +31,9 @@ def parse_key(content, password=None):
 def download(filename: str, url: str):
     with urllib.request.urlopen(url) as response, open(filename, 'wb') as out_file:
         shutil.copyfileobj(response, out_file)
+
+def _check_validity(cert: Certificate):
+    now = datetime.utcnow()
+    if cert.not_valid_before > now or cert.not_valid_after < now:
+        return False
+    return True

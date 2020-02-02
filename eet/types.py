@@ -21,7 +21,14 @@ class UUIDType(str):
 
 class boolean:
     def __init__(self, val):
-        if not isinstance(val, bool):
+        if isinstance(val, str):
+            if val == "true":
+                self._val = True
+            elif val == "false":
+                self._val = False
+            else:
+                raise ValueError(str(val) + " is not bool")
+        elif not isinstance(val, bool):
             raise ValueError(str(val) + " is not bool")
         self._val = val
     
@@ -32,6 +39,12 @@ class boolean:
         return "true" if self._val else "false"
 
 class dateTime(datetime):
+    def __new__(cls, val, *args, **kwargs):
+        if isinstance(val, str):
+            date = datetime.strptime('2019-01-04T16:41:24+0200', "%Y-%m-%dT%H:%M:%S%z")
+            return datetime.__new__(cls, date.year, date.month, date.day, date.hour, date.minute, date.second, tzinfo=date.tzinfo)
+        else:
+            return datetime.__new__(cls, val, *args, **kwargs)
     def __str__(self):
         return self.replace(tzinfo=timezone.utc).astimezone().replace(microsecond=0).isoformat()
 

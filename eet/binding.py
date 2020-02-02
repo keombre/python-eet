@@ -62,18 +62,20 @@ class Odpoved:
         "uuid_zpravy": None, # Optional[types.UUIDType]
         "bkp": None, # Optional[types.BkpType]
         "dat_prij": None, # Optional[types.dateTime]
-        "dat_odmit": None, # Optional[types.dateTime]
-        "Potvrzeni": {
-            "fik": None, # types.FikType
-            "test": None # Optional[types.boolean]
-        },
-        "Chyba": {
-            "kod": None, # types.KodChybaType
-            "test": None # Optional[types.boolean]
-        }
+        "dat_odmit": None # Optional[types.dateTime]
+    }
+    Potvrzeni = {
+        "fik": None, # types.FikType
+        "test": None # Optional[types.boolean]
+    }
+    Chyba = {
+        "kod": None, # types.KodChybaType
+        "test": None, # Optional[types.boolean],
+        "text": None # str
     }
     Varovani = {
-        "kod_varov": None # Optional[types.KodVarovType]
+        "kod_varov": None, # Optional[types.KodVarovType]
+        "text": None # str
     }
 
 class Soap:
@@ -169,7 +171,10 @@ class Soap:
         server_cert = helpers.parse_cert(b"-----BEGIN CERTIFICATE-----\n" + textwrap.fill(server_cert_text, 64).encode() + b"\n-----END CERTIFICATE-----\n")
 
         if server_cert.subject.get_attributes_for_oid(oid.NameOID.ORGANIZATION_NAME)[0].value != "Česká republika - Generální finanční ředitelství":
-            raise ValueError("Invalid server certificate")
+            raise ValueError("invalid server certificate")
+            
+        if not helpers._check_validity(server_cert):
+            raise ValueError("server certificate expired")
 
         if not ignore_invalid_cert:
             # validate signature
@@ -201,11 +206,40 @@ class Soap:
             raise ValueError("invalid security token")
 
     @staticmethod
+    def _convert(data, type):
+        if data is not None:
+            return type(data)
+        return None
+    
+    @staticmethod
     def parse_response(text: str, ignore_invalid_cert=False):
         parser = etree.XMLParser(remove_blank_text=True)
         root = etree.XML(text, parser)
 
-        if root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}Security"):
+        if root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}Security") is not None:
             Soap.__validate_message(root, ignore_invalid_cert)
         
+        resp = Odpoved()
+        header = root.find(".//{http://fs.mfcr.cz/eet/schema/v3}Hlavicka")
+        resp.Hlavicka["uuid_zpravy"] = Soap._convert(header.get("uuid_zpravy"), types.UUIDType)
+        resp.Hlavicka["bkp"] = Soap._convert(header.get("bkp"), types.BkpType)
+        resp.Hlavicka["dat_prij"] = Soap._convert(header.get("dat_prij"), types.dateTime)
+        resp.Hlavicka["dat_odmit"] = Soap._convert(header.get("dat_odmit"), types.dateTime)
         
+        success = root.find(".//{http://fs.mfcr.cz/eet/schema/v3}Potvrzeni")
+        if success is not None:
+            resp.Potvrzeni["fik"] = Soap._convert(success.get("fik"), types.FikType)
+            resp.Potvrzeni["test"] = Soap._convert(success.get("test"), types.boolean)
+        
+        error = root.find(".//{http://fs.mfcr.cz/eet/schema/v3}Chyba")
+        if error is not None:
+            resp.Chyba["kod"] = Soap._convert(error.get("kod"), types.KodChybaType)
+            resp.Chyba["test"] = Soap._convert(error.get("test"), types.boolean)
+            resp.Chyba["text"] = error.text.encode()
+        
+        warning = root.find(".//{http://fs.mfcr.cz/eet/schema/v3}Varovani")
+        if warning is not None:
+            resp.Varovani["kod_varov"] = Soap._convert(warning.get("kod_varov"), types.KodVarovType)
+            resp.Varovani["text"] = warning.text.encode()
+        
+        return resp

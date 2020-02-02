@@ -10,13 +10,6 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
 class Config:
 
-    PRODUCTION_URL = "https://www.etrzby.cz/assets/cs/prilohy/cacert-produkcni.crt"
-    PRODUCTION_FILE = "production.pem"
-    PLAYGROUND_URL = "https://www.etrzby.cz/assets/cs/prilohy/cacert-playground.crt"
-    PLAYGROUND_FILE = "playground.pem"
-
-    LOCAL_PATH = str(Path(__file__).parent.absolute().joinpath('certs'))
-
     def __init__(
         self,
         cert: Certificate,
@@ -31,7 +24,7 @@ class Config:
         if cert.issuer.get_attributes_for_oid(oid.NameOID.ORGANIZATION_NAME)[0].value != "Česká Republika – Generální finanční ředitelství":
             raise ValueError("Certificate was not issued by MFCR")
 
-        if not self.__check_validity(cert):
+        if not helpers._check_validity(cert):
             raise ValueError("certificate expired - check system time or update your certificate")
         self._cert = cert
 
@@ -77,14 +70,7 @@ class Config:
     
     def private_key(self):
         return self._private_key
-    
-    @staticmethod
-    def __check_validity(cert: Certificate):
-        now = datetime.utcnow()
-        if cert.not_valid_before > now or cert.not_valid_after < now:
-            return False
-        return True
-    
+
 
 class Factory:
     class Invoice(binding.Trzba):
@@ -100,7 +86,7 @@ class Factory:
                 self.Hlavicka["dat_odesl"] = types.dateTime.utcnow()
             self.Hlavicka["uuid_zpravy"] = types.UUIDType(str(uuid.uuid4()))
 
-            print(self._buildXml())
+            print(self._buildXml().decode())
     
     class Response:
         # status
