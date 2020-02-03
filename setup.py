@@ -4,8 +4,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="eet-keombre",
-    version="0.0.1",
+    name="czech-eet",
+    version="1.0.1",
     author="Keombre",
     author_email="keombre8@gmail.com",
     description="API for EET",

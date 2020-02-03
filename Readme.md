@@ -3,10 +3,10 @@ Simple to use and mostly secure (mainly pedantic) API for Czech EET Gate.
 
 ## Instalation
 ```
-pip install ...
+pip install czech-eet
 ```
 
-## Example usage
+## Usage
 
 ### Basic usage with single request
 ```python
