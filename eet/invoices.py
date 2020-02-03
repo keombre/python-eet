@@ -1,10 +1,15 @@
-from . import binding, types, helpers
-from datetime import datetime
-import uuid
+from . import binding, types, helpers, remote
 
+from datetime import datetime
 from pathlib import Path
 
+import uuid
+import base64
+import hashlib
+
 from cryptography.x509 import Certificate, oid
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
 
@@ -73,26 +78,75 @@ class Config:
 
 
 class Factory:
+
+    class Codes:
+        bkp: types.BkpType = None
+        pkp: types.PkpType = None
+        fik: types.FikType = None
+
     class Invoice(binding.Trzba):
         def __init__(self, config: Config):
             super()
             self._config = config
+            self._codes = Factory.Codes()
 
         def _buildXml(self):
             return binding.Soap(self._config.cert(), self._config.private_key()).build(self)
         
-        def send(self):
+        def _prepare(self):
             if self.Hlavicka["prvni_zaslani"] or not self.Hlavicka["dat_odesl"]:
                 self.Hlavicka["dat_odesl"] = types.dateTime.utcnow()
             self.Hlavicka["uuid_zpravy"] = types.UUIDType(str(uuid.uuid4()))
 
-            print(self._buildXml().decode())
+            sign = self._calc_sign()
+            self._codes.pkp = self.Codes["pkp"] = types.PkpType(base64.b64encode(sign).decode())
+            self._codes.bkp = self.Codes["bkp"] = types.BkpType(self._calc_bkp(sign))
+        
+        def _calc_sign(self):
+            text = "{0}|{1}|{2}|{3}|{4}|{5}".format(
+                self.Data["dic_popl"],
+                self.Data["id_provoz"],
+                self.Data["id_pokl"],
+                self.Data["porad_cis"],
+                self.Data["dat_trzby"],
+                self.Data["celk_trzba"]
+            )
+            return self._config.private_key().sign(text.encode('utf8'), padding.PKCS1v15(), hashes.SHA256())
+        
+        @staticmethod
+        def _calc_bkp(sign):
+            digest = hashlib.sha1(sign).hexdigest()
+            return ("{0}-{1}-{2}-{3}-{4}".format(digest[0:8], digest[8:16], digest[16:24], digest[24:32], digest[32:])).upper()
+        
+        def build(self):
+            self._prepare()
+            return self._buildXml()
+
+        def send(self):
+            return remote.Scheduler.send(self)
+        
+        def prod(self):
+            return self._config.prod()
+        
+        def codes(self):
+            return self._codes
     
-    class Response:
-        # status
-        # bkp
-        # fik/pkp
-        pass
+    class Response(binding.Odpoved):
+        def __init__(self, codes, obj = None):
+            if isinstance(obj, binding.Odpoved):
+                self.Hlavicka = obj.Hlavicka
+                self.Potvrzeni = obj.Potvrzeni
+                self.Chyba = obj.Chyba
+                self.Varovani = obj.Varovani
+            self._codes = codes
+            if self:
+                self._codes.fik = self.Potvrzeni["fik"]
+        
+        def __bool__(self):
+            return self.Potvrzeni["fik"] is not None
+        
+        def codes(self):
+            return self._codes
             
     def __init__(self, config: Config, ):
         if not isinstance(config, Config):

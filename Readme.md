@@ -28,10 +28,15 @@ config = invoices.Config(cert, pk, 141, "1patro-vpravo")
 # create factory using config
 factory = invoices.Factory(config)
 
-# build new invoice
+# build new invoice & send
 invoice = factory.new("141-18543-05", 236.00, zakl_dan1=100.0, dan1=21.0)
+response = invoice.send()
 
-# and finally get XML (sending will be implemented)
-invoice.send()
+# now validate response and get fik
+codes = response.codes()
+if response:
+    print("BKP: {0}\nFIK: {1}".format(codes.bkp, codes.fik))
+else:
+    print("BKP: {0}\nPKP: {1}".format(codes.bkp, codes.pkp))
 
 ```

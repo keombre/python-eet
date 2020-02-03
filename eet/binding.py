@@ -56,6 +56,10 @@ class Trzba:
             "encoding": "base16" # str
         }
     }
+    Codes = {
+        "pkp": None, # types.PkpType
+        "bkp": None # types.BkpType
+    }
 
 class Odpoved:
     Hlavicka = {
@@ -106,9 +110,8 @@ class Soap:
         etree.SubElement(root, "{http://fs.mfcr.cz/eet/schema/v3}Data", {k: str(v) for k, v in Trzba.Data.items() if v is not None})
         codes = etree.SubElement(root, "{http://fs.mfcr.cz/eet/schema/v3}KontrolniKody")
 
-        sign = self._calc_sign(sale)
-        etree.SubElement(codes, "{http://fs.mfcr.cz/eet/schema/v3}pkp", sale.KontrolniKody["pkp"]).text = base64.b64encode(sign)
-        etree.SubElement(codes, "{http://fs.mfcr.cz/eet/schema/v3}bkp", sale.KontrolniKody["bkp"]).text = self._calc_bkp(sign)
+        etree.SubElement(codes, "{http://fs.mfcr.cz/eet/schema/v3}pkp", sale.KontrolniKody["pkp"]).text = sale.Codes["pkp"]
+        etree.SubElement(codes, "{http://fs.mfcr.cz/eet/schema/v3}bkp", sale.KontrolniKody["bkp"]).text = sale.Codes["bkp"]
 
         return root
 
@@ -148,21 +151,6 @@ class Soap:
         root.find(".//{http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd}Reference").set("URI", "#" + binary_token)
         
         return root
-    
-    def _calc_sign(self, sale: Trzba):
-        text = "{0}|{1}|{2}|{3}|{4}|{5}".format(
-            sale.Data["dic_popl"],
-            sale.Data["id_provoz"],
-            sale.Data["id_pokl"],
-            sale.Data["porad_cis"],
-            sale.Data["dat_trzby"],
-            sale.Data["celk_trzba"]
-        )
-        return self.private_key.sign(text.encode('utf8'), padding.PKCS1v15(), hashes.SHA256())
-    
-    def _calc_bkp(self, sign):
-        digest = hashlib.sha1(sign).hexdigest()
-        return ("{0}-{1}-{2}-{3}-{4}".format(digest[0:8], digest[8:16], digest[16:24], digest[24:32], digest[32:])).upper()
 
     @staticmethod
     def __validate_message(root: etree, ignore_invalid_cert):
@@ -235,11 +223,11 @@ class Soap:
         if error is not None:
             resp.Chyba["kod"] = Soap._convert(error.get("kod"), types.KodChybaType)
             resp.Chyba["test"] = Soap._convert(error.get("test"), types.boolean)
-            resp.Chyba["text"] = error.text.encode()
+            resp.Chyba["text"] = error.text
         
         warning = root.find(".//{http://fs.mfcr.cz/eet/schema/v3}Varovani")
         if warning is not None:
             resp.Varovani["kod_varov"] = Soap._convert(warning.get("kod_varov"), types.KodVarovType)
-            resp.Varovani["text"] = warning.text.encode()
+            resp.Varovani["text"] = warning.text
         
         return resp

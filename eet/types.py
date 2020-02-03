@@ -128,7 +128,7 @@ class FikType(str):
         return str.__new__(cls, val)
 
 class PkpType(str):
-    PATTERN = r"^[a-zA-Z0-9+\/]{344}$"
+    PATTERN = r"^[a-zA-Z0-9+\/]{342}[a-zA-Z0-9+=\/]{2}$"
 
     def __new__(cls, val):
         if not _pattern(val, cls.PATTERN):
