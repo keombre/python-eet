@@ -1,7 +1,10 @@
 # Python EET API
 Simple to use and mostly secure (mainly pedantic) API for Czech EET Gate.
 
-## Instalation
+![PyPI - License](https://img.shields.io/pypi/l/czech-eet)
+![PyPI](https://img.shields.io/pypi/v/czech-eet)
+
+## Installation
 ```
 pip install czech-eet
 ```
