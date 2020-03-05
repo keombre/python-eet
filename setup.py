@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="czech-eet",
-    version="1.0.1",
+    version="1.0.2",
     author="Keombre",
     author_email="keombre8@gmail.com",
     description="API for EET",
