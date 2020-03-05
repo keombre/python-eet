@@ -196,7 +196,10 @@ class Soap:
     @staticmethod
     def _convert(data, type):
         if data is not None:
-            return type(data)
+            try:
+                return type(data)
+            except ValueError:
+                return type(type.__base__(data))
         return None
     
     @staticmethod

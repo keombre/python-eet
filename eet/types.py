@@ -13,6 +13,8 @@ class UUIDType(str):
     PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
 
     def __new__(cls, val):
+        if not isinstance(val, str):
+            raise ValueError(str(val) + " is not string")
         if not _pattern(val, cls.PATTERN):
             raise ValueError(str(val) + " does not match pattern")
         if len(val) != 36:
@@ -37,6 +39,9 @@ class boolean:
     
     def __str__(self):
         return "true" if self._val else "false"
+    
+    def __repr__(self):
+        return self.__str__()
 
 class dateTime(datetime):
     def __new__(cls, val, *args, **kwargs):
@@ -52,12 +57,16 @@ class CZDICType(str):
     PATTERN = r"^CZ[0-9]{8,10}$"
 
     def __new__(cls, val):
+        if not isinstance(val, str):
+            raise ValueError(str(val) + " is not string")
         if not _pattern(val, cls.PATTERN):
             raise ValueError(str(val) + " does not match pattern")
         return str.__new__(cls, val)
 
 class IdProvozType(int):
     def __new__(cls, val):
+        if not isinstance(val, int):
+            raise ValueError(str(val) + " is not int")
         if val < 1 or val > 999999:
             raise ValueError(str(val) + " is outside range")
         return int.__new__(cls, val)
@@ -66,6 +75,8 @@ class string20(str):
     PATTERN = r"^[0-9a-zA-Z\.,:;/#\-_ ]{1,20}$"
 
     def __new__(cls, val):
+        if not isinstance(val, str):
+            raise ValueError(str(val) + " is not string")
         if not _pattern(val, cls.PATTERN):
             raise ValueError(str(val) + " does not match pattern")
         return str.__new__(cls, val)
@@ -74,6 +85,8 @@ class string25(str):
     PATTERN = r"^[0-9a-zA-Z\.,:;/#\-_ ]{1,25}$"
 
     def __new__(cls, val):
+        if not isinstance(val, str):
+            raise ValueError(str(val) + " is not string")
         if not _pattern(val, cls.PATTERN):
             raise ValueError(str(val) + " does not match pattern")
         return str.__new__(cls, val)
@@ -91,18 +104,24 @@ class CastkaType(float):
 
 class KodChybaType(int):
     def __new__(cls, val):
+        if not isinstance(val, int):
+            raise ValueError(str(val) + " is not int")
         if val < -999 or val > 999:
             raise ValueError(str(val) + " is outside range")
         return int.__new__(cls, val)
 
 class KodVarovType(int):
     def __new__(cls, val):
+        if not isinstance(val, int):
+            raise ValueError(str(val) + " is not int")
         if val < 1 or val > 999:
             raise ValueError(str(val) + " is outside range")
         return int.__new__(cls, val)
 
 class RezimType(int):
     def __new__(cls, val):
+        if not isinstance(val, int):
+            raise ValueError(str(val) + " is not int")
         if val != 0 and val != 1:
             raise ValueError(str(val) + " is not valid")
         return int.__new__(cls, val)
@@ -111,6 +130,8 @@ class BkpType(str):
     PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}-[0-9a-fA-F]{8}$"
 
     def __new__(cls, val):
+        if not isinstance(val, str):
+            raise ValueError(str(val) + " is not string")
         if not _pattern(val, cls.PATTERN):
             raise ValueError(str(val) + " does not match pattern")
         if len(val) != 44:
@@ -121,6 +142,8 @@ class FikType(str):
     PATTERN = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}-[0-9a-fA-F]{2}$"
 
     def __new__(cls, val):
+        if not isinstance(val, str):
+            raise ValueError(str(val) + " is not string")
         if not _pattern(val, cls.PATTERN):
             raise ValueError(str(val) + " does not match pattern")
         if len(val) != 39:
@@ -131,6 +154,8 @@ class PkpType(str):
     PATTERN = r"^[a-zA-Z0-9+\/]{342}[a-zA-Z0-9+=\/]{2}$"
 
     def __new__(cls, val):
+        if not isinstance(val, str):
+            raise ValueError(str(val) + " is not string")
         if not _pattern(val, cls.PATTERN):
             raise ValueError(str(val) + " does not match pattern")
         return str.__new__(cls, re.sub(r"\s+", "", val))

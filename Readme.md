@@ -49,6 +49,7 @@ if response:
     print("BKP: {0}\nFIK: {1}".format(codes.bkp, codes.fik))
 else:
     print("BKP: {0}\nPKP: {1}".format(codes.bkp, codes.pkp))
+    print("Errors:", response.Chyba, response.Varovani)
 
 ```
 
