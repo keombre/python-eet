@@ -3,6 +3,7 @@ Simple to use and mostly secure (mainly pedantic) API for Czech EET Gate.
 
 ![PyPI - License](https://img.shields.io/pypi/l/czech-eet)
 ![PyPI](https://img.shields.io/pypi/v/czech-eet)
+[![Downloads](https://pepy.tech/badge/czech-eet)](https://pepy.tech/project/czech-eet)
 
 ## Installation
 ```
