@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="czech-eet",
-    version="1.0.2",
+    version="1.0.3",
     author="Keombre",
     author_email="keombre8@gmail.com",
     description="API for EET",
@@ -22,5 +22,9 @@ setuptools.setup(
     install_requires=[
         "cryptography",
         "lxml"
-    ]
+    ],
+    include_package_data=True,
+    package_data={
+        '': ['eet/soap_template.xml'],
+    }
 )
