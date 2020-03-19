@@ -46,7 +46,7 @@ class boolean:
 class dateTime(datetime):
     def __new__(cls, val, *args, **kwargs):
         if isinstance(val, str):
-            date = datetime.strptime('2019-01-04T16:41:24+0200', "%Y-%m-%dT%H:%M:%S%z")
+            date = datetime.strptime(val, "%Y-%m-%dT%H:%M:%S%z")
             return datetime.__new__(cls, date.year, date.month, date.day, date.hour, date.minute, date.second, tzinfo=date.tzinfo)
         else:
             return datetime.__new__(cls, val, *args, **kwargs)
