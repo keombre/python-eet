@@ -6,7 +6,7 @@ from urllib import request, error
 class Scheduler:
 
     PLAYGROUND_ENDPOINT = "https://pg.eet.cz:443/eet/services/EETServiceSOAP/v3/"
-    PRODUCTION_ENDPOINT = "https://pg.eet.cz:443/eet/services/EETServiceSOAP/v3/"
+    PRODUCTION_ENDPOINT = "https://eet.cz:443/eet/services/EETServiceSOAP/v3/"
 
     def __init__(self):
         self._queue = []
